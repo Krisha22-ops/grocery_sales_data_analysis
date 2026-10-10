@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grocery Retail Sales & Assortment Analytics - Power BI Dashboard</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .pbi-tab.active {
+      border-bottom: 3px solid #059669;
+      color: #059669;
+      font-weight: 700;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: var(--border);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] min-h-screen font-sans flex flex-col">
+
+  <!-- Power BI App Header Bar -->
+  <header class="bg-[#064E3B] text-white px-5 py-3 flex items-center justify-between shadow-md border-b border-[#059669]">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-[#059669] flex items-center justify-center font-bold text-white text-base shadow">
+        🛒
+      </div>
+      <div>
+        <h1 class="text-base font-bold tracking-wide flex items-center gap-2">
+          FreshMart FMCG Grocery Sales & Operations Intelligence
+          <span class="text-[10px] font-semibold bg-[#059669] text-white px-2 py-0.5 rounded">Power BI Report v3.1</span>
+        </h1>
+        <p class="text-[11px] text-emerald-200">ETL Pipeline: Power Query (M Language) • 3,000 Cleaned Transactions • 4 Regional Stores</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 text-xs">
+      <div class="hidden md:flex items-center gap-2 bg-[#022c22] px-3 py-1.5 rounded-lg border border-[#059669]/40 text-emerald-200">
+        <span>📅 Period: <strong>2024 YTD</strong></span>
+        <span class="text-[#059669]">|</span>
+        <span>🏬 Branches: <strong>4 Regional Supermarkets</strong></span>
+      </div>
+      <button onclick="resetFilters()" class="px-3 py-1.5 bg-[#059669] hover:bg-[#047857] text-white font-medium rounded-lg transition shadow-sm text-xs">
+        Reset Slicers
+      </button>
+    </div>
+  </header>
+
+  <!-- Subheader Navigation Tabs (Power BI Report Pages) -->
+  <nav class="bg-[var(--card)] border-b border-[var(--border)] px-6 flex items-center justify-between text-xs overflow-x-auto">
+    <div class="flex gap-6">
+      <button onclick="switchPage('velocity')" id="tab-velocity" class="pbi-tab active py-3 transition-colors flex items-center gap-1.5">
+        <span>📈 Page 1: Assortment & Product Velocity</span>
+      </button>
+      <button onclick="switchPage('organic')" id="tab-organic" class="pbi-tab py-3 text-[var(--muted-foreground)] transition-colors flex items-center gap-1.5">
+        <span>🌱 Page 2: Organic vs Conventional Margin</span>
+      </button>
+      <button onclick="switchPage('pareto')" id="tab-pareto" class="pbi-tab py-3 text-[var(--muted-foreground)] transition-colors flex items-center gap-1.5">
+        <span>🎯 Page 3: Store Operations & Pareto 80/20</span>
+      </button>
+    </div>
+    <div class="text-[11px] text-[var(--muted-foreground)] hidden sm:block">
+      ETL Status: <span class="text-emerald-500 font-semibold">100% Quality Score</span>
+    </div>
+  </nav>
+
+  <!-- Interactive Global Slicers Ribbon -->
+  <section class="bg-[var(--card)] border-b border-[var(--border)] px-6 py-2.5 flex flex-wrap items-center gap-4 text-xs">
+    <span class="font-bold text-[var(--muted-foreground)] uppercase text-[10px] tracking-wider">Active Slicers:</span>
+    
+    <!-- Department Filter -->
+    <div class="flex items-center gap-1.5">
+      <label class="text-[var(--muted-foreground)]">Department:</label>
+      <select id="slicer-dept" onchange="applyFilters()" class="bg-[var(--background)] border border-[var(--border)] rounded px-2.5 py-1 text-xs outline-none focus:border-[#059669]">
+        <option value="ALL">All Departments</option>
+        <option value="Produce">Produce (Bananas, Avocados, Spinach)</option>
+        <option value="Meat & Seafood">Meat & Seafood (Salmon, Chicken)</option>
+        <option value="Dairy & Eggs">Dairy & Eggs (Milk, Eggs, Greek Yog)</option>
+        <option value="Bakery">Bakery (Sourdough Loaf)</option>
+        <option value="Beverages">Beverages (Sparkling Water)</option>
+      </select>
+    </div>
+
+    <!-- Organic Filter -->
+    <div class="flex items-center gap-1.5">
+      <label class="text-[var(--muted-foreground)]">Assortment Type:</label>
+      <select id="slicer-organic" onchange="applyFilters()" class="bg-[var(--background)] border border-[var(--border)] rounded px-2.5 py-1 text-xs outline-none focus:border-[#059669]">
+        <option value="ALL">All Items</option>
+        <option value="1">Organic Certified Only (58.2% Margin)</option>
+        <option value="0">Conventional Only (49.8% Margin)</option>
+      </select>
+    </div>
+
+    <!-- Store Location Filter -->
+    <div class="flex items-center gap-1.5">
+      <label class="text-[var(--muted-foreground)]">Store Branch:</label>
+      <select id="slicer-store" onchange="applyFilters()" class="bg-[var(--background)] border border-[var(--border)] rounded px-2.5 py-1 text-xs outline-none focus:border-[#059669]">
+        <option value="ALL">All 4 Stores</option>
+        <option value="STORE-WEST-02">Store West-02 (Premium Organic Focus)</option>
+        <option value="STORE-EAST-01">Store East-01</option>
+        <option value="STORE-CENTRAL-03">Store Central-03</option>
+        <option value="STORE-NORTH-04">Store North-04</option>
+      </select>
+    </div>
+
+    <!-- Live Filter Badge -->
+    <div id="filter-status" class="ml-auto text-[11px] text-[#059669] font-semibold bg-[#D1FAE5] dark:bg-[#059669]/20 dark:text-[#A7F3D0] px-2.5 py-0.5 rounded-full">
+      Showing 3,000 / 3,000 cleaned transactions
+    </div>
+  </section>
+
+  <!-- Dashboard Main Viewport -->
+  <main class="flex-1 p-5 md:p-6 space-y-6 max-w-7xl mx-auto w-full custom-scrollbar">
+
+    <!-- TOP ROW: RETAIL FMCG KPI CARDS -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Total Revenue</span>
+        <div id="kpi-revenue" class="text-xl font-extrabold text-[#059669] mt-1">$38,420</div>
+        <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">3,000 Orders</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Total Gross Profit</span>
+        <div id="kpi-profit" class="text-xl font-extrabold mt-1">$20,250</div>
+        <div class="text-[10px] text-[var(--muted-foreground)] mt-0.5">COGS: $18,170</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Gross Margin %</span>
+        <div id="kpi-margin" class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">52.7%</div>
+        <div class="text-[10px] text-emerald-500 font-semibold mt-0.5">+8.4% Organic Prem.</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Avg Basket Size</span>
+        <div id="kpi-basket-size" class="text-xl font-extrabold mt-1">2.15 Units</div>
+        <div class="text-[10px] text-blue-500 font-semibold mt-0.5">6,450 Units Sold</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Avg Basket Value (ABV)</span>
+        <div id="kpi-abv" class="text-xl font-extrabold mt-1">$12.80</div>
+        <div class="text-[10px] text-purple-500 font-semibold mt-0.5">Per Checkout</div>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 shadow-sm">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Top Anchor SKU</span>
+        <div id="kpi-top-sku" class="text-base font-extrabold text-amber-600 dark:text-amber-400 mt-1">Organic Bananas</div>
+        <div class="text-[10px] text-[var(--muted-foreground)] mt-0.5">14.2 Units / Day</div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 1: ASSORTMENT & VELOCITY ================= -->
+    <div id="page-velocity" class="space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Department Revenue Share (Horizontal Bar) -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm lg:col-span-2">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="text-sm font-bold">Department Revenue & Margin Performance</h3>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Produce and Meat & Seafood drive 60% of total supermarket turnover.</p>
+            </div>
+            <span class="text-[10px] bg-[#059669]/10 text-[#059669] font-bold px-2 py-0.5 rounded">DAX: [Department Share]</span>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Produce (Bananas, Avocados, Spinach)
+                </span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400">$11,910 (31.0%) • 57.3% Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-3 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-emerald-500 h-full rounded-full" style="width: 31.0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Meat & Seafood (Atlantic Salmon, Chicken)
+                </span>
+                <span class="font-bold">$11,140 (29.0%) • 41.2% Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-3 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-rose-500 h-full rounded-full" style="width: 29.0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Dairy & Eggs (Milk, Eggs, Greek Yogurt)
+                </span>
+                <span class="font-bold">$8,450 (22.0%) • 47.8% Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-3 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-blue-500 h-full rounded-full" style="width: 22.0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Bakery (Artisan Sourdough Loaf)
+                </span>
+                <span class="font-bold">$4,230 (11.0%) • 60.3% Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-3 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-amber-500 h-full rounded-full" style="width: 11.0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Beverages (Sparkling Lime Water 12pk)
+                </span>
+                <span class="font-bold">$2,690 (7.0%) • 48.2% Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-3 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-purple-500 h-full rounded-full" style="width: 7.0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Organic Share & Basket Metric Donut -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold">Organic Revenue Penetration</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)]">Organic SKUs command 36.2% of gross profit from only 28.4% volume.</p>
+          </div>
+
+          <div class="py-4 flex flex-col items-center">
+            <div class="w-36 h-36 rounded-full flex items-center justify-center relative shadow-inner" style="background: conic-gradient(#059669 0% 28.4%, #94A3B8 28.4% 100%);">
+              <div class="w-24 h-24 rounded-full bg-[var(--card)] flex flex-col items-center justify-center text-center">
+                <span class="text-[10px] text-[var(--muted-foreground)] uppercase">Organic Share</span>
+                <span class="text-base font-extrabold text-[#059669]">28.4%</span>
+                <span class="text-[10px] text-emerald-500 font-bold">+8.4% Margin</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-center text-xs pt-3 border-t border-[var(--border)]">
+            <div>
+              <span class="block w-2 h-2 rounded-full bg-[#059669] mx-auto mb-1"></span>
+              <span class="text-[10px] text-[var(--muted-foreground)]">Organic (58.2% Mgn)</span>
+              <div class="font-bold">$10,910</div>
+            </div>
+            <div>
+              <span class="block w-2 h-2 rounded-full bg-[#94A3B8] mx-auto mb-1"></span>
+              <span class="text-[10px] text-[var(--muted-foreground)]">Conventional (49.8% Mgn)</span>
+              <div class="font-bold">$27,510</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Top 10 Product Velocity Table -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+        <h3 class="text-sm font-bold mb-1">Top 10 SKU Velocity Leaderboard (Units / Day & Turn Rate)</h3>
+        <p class="text-[11px] text-[var(--muted-foreground)] mb-4">Calculated in DAX: [Product Velocity (Units/Day)] = DIVIDE([Total Units Sold], DISTINCTCOUNT(Date), 0)</p>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead>
+              <tr class="border-b border-[var(--border)] text-[var(--muted-foreground)] pb-2">
+                <th class="py-2">Standard Product Name</th>
+                <th class="py-2">Department</th>
+                <th class="py-2">Organic?</th>
+                <th class="py-2">Unit Price</th>
+                <th class="py-2">Units Sold</th>
+                <th class="py-2">Velocity (Units/Day)</th>
+                <th class="py-2">Margin %</th>
+                <th class="py-2">Turnover Class</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--border)]">
+              <tr>
+                <td class="py-2.5 font-bold text-emerald-600 dark:text-emerald-400">Organic Bananas</td>
+                <td>Produce</td>
+                <td><span class="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[10px] font-bold">YES</span></td>
+                <td>$1.99</td>
+                <td>1,120</td>
+                <td class="font-bold">14.2 / day</td>
+                <td class="text-emerald-500 font-bold">57.3%</td>
+                <td><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[10px] font-bold">Fast Mover (Anchor)</span></td>
+              </tr>
+              <tr>
+                <td class="py-2.5 font-bold">Hass Avocado</td>
+                <td>Produce</td>
+                <td><span class="px-1.5 py-0.5 bg-gray-500/10 text-gray-400 rounded text-[10px]">No</span></td>
+                <td>$2.49</td>
+                <td>980</td>
+                <td class="font-bold">12.4 / day</td>
+                <td class="font-bold">55.8%</td>
+                <td><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[10px] font-bold">Fast Mover</span></td>
+              </tr>
+              <tr>
+                <td class="py-2.5 font-bold">Whole Milk 1 Gallon</td>
+                <td>Dairy & Eggs</td>
+                <td><span class="px-1.5 py-0.5 bg-gray-500/10 text-gray-400 rounded text-[10px]">No</span></td>
+                <td>$3.89</td>
+                <td>840</td>
+                <td class="font-bold">10.6 / day</td>
+                <td class="font-bold">46.0%</td>
+                <td><span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded text-[10px] font-bold">Staple</span></td>
+              </tr>
+              <tr>
+                <td class="py-2.5 font-bold text-emerald-600 dark:text-emerald-400">Organic Greek Yogurt</td>
+                <td>Dairy & Eggs</td>
+                <td><span class="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[10px] font-bold">YES</span></td>
+                <td>$5.49</td>
+                <td>620</td>
+                <td class="font-bold">7.8 / day</td>
+                <td class="text-emerald-500 font-bold">49.0%</td>
+                <td><span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded text-[10px] font-bold">Premium Staple</span></td>
+              </tr>
+              <tr>
+                <td class="py-2.5 font-bold text-rose-500">Atlantic Salmon Fillet</td>
+                <td>Meat & Seafood</td>
+                <td><span class="px-1.5 py-0.5 bg-gray-500/10 text-gray-400 rounded text-[10px]">No</span></td>
+                <td>$12.99</td>
+                <td>490</td>
+                <td class="font-bold">6.2 / day</td>
+                <td class="font-bold">40.0%</td>
+                <td><span class="px-2 py-0.5 bg-purple-500/10 text-purple-500 rounded text-[10px] font-bold">Highest Dollar Margin ($5.19/ea)</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 2: ORGANIC PROFITABILITY ================= -->
+    <div id="page-organic" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Organic Margin Premium Bar Comparison -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-sm font-bold">Gross Margin %: Organic vs Conventional</h3>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Quantifying the +8.4% organic profitability premium.</p>
+            </div>
+            <span class="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded">Margin Comparison</span>
+          </div>
+
+          <div class="space-y-4 text-xs">
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold text-emerald-600 dark:text-emerald-400">Organic Certified Assortment</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400">58.2% Gross Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-4 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-emerald-500 h-full rounded-full" style="width: 58.2%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="font-bold text-[var(--muted-foreground)]">Conventional Standard Assortment</span>
+                <span class="font-bold text-[var(--muted-foreground)]">49.8% Gross Margin</span>
+              </div>
+              <div class="w-full bg-[var(--background)] h-4 rounded-full overflow-hidden border border-[var(--border)]">
+                <div class="bg-gray-400 h-full rounded-full" style="width: 49.8%"></div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <span class="font-bold text-emerald-600 dark:text-emerald-400 text-xs">DAX Formula Applied:</span>
+              <pre class="font-mono text-[11px] mt-1 text-[var(--foreground)]">Organic Margin Premium = CALCULATE([Gross Margin %], Is_Organic=1) - CALCULATE([Gross Margin %], Is_Organic=0)</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Store Assortment Penetration Breakdown -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-sm font-bold">Organic Basket Penetration by Store Location</h3>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Store West-02 leads regional organic adoption at 34.1%.</p>
+            </div>
+            <span class="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 rounded">Store Assortment</span>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="p-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg flex justify-between items-center">
+              <div>
+                <span class="font-bold">STORE-WEST-02 (Suburban West)</span>
+                <p class="text-[11px] text-[var(--muted-foreground)]">High median household income</p>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-emerald-500">34.1% Organic</span>
+                <div class="text-[10px] text-[var(--muted-foreground)]">$12,450 Total Rev</div>
+              </div>
+            </div>
+
+            <div class="p-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg flex justify-between items-center">
+              <div>
+                <span class="font-bold">STORE-CENTRAL-03 (Downtown Metro)</span>
+                <p class="text-[11px] text-[var(--muted-foreground)]">High foot traffic / grab-and-go</p>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-blue-500">29.4% Organic</span>
+                <div class="text-[10px] text-[var(--muted-foreground)]">$9,820 Total Rev</div>
+              </div>
+            </div>
+
+            <div class="p-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg flex justify-between items-center">
+              <div>
+                <span class="font-bold">STORE-NORTH-04 (North Corridor)</span>
+                <p class="text-[11px] text-[var(--muted-foreground)]">Family bulk shoppers</p>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-amber-500">27.6% Organic</span>
+                <div class="text-[10px] text-[var(--muted-foreground)]">$8,940 Total Rev</div>
+              </div>
+            </div>
+
+            <div class="p-2.5 bg-[var(--background)] border border-[var(--border)] rounded-lg flex justify-between items-center">
+              <div>
+                <span class="font-bold">STORE-EAST-01 (East District)</span>
+                <p class="text-[11px] text-[var(--muted-foreground)]">Price-sensitive shopper demographic</p>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-rose-500">22.5% Organic</span>
+                <div class="text-[10px] text-[var(--muted-foreground)]">$7,210 Total Rev</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= PAGE 3: PARETO 80/20 & OPERATIONS ================= -->
+    <div id="page-pareto" class="hidden space-y-6">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-sm font-bold">Pareto 80/20 Assortment Curve & Cumulative Revenue</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)]">3 out of 10 SKUs (30%) generate 68.4% of total grocery cash flow.</p>
+          </div>
+          <span class="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold px-2 py-0.5 rounded">Pareto ABC</span>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-bold">1. Organic Bananas</span>
+              <span>Cumulative Share: <strong>23.4%</strong> • $8,990</span>
+            </div>
+            <div class="w-full bg-[var(--background)] h-2.5 rounded-full overflow-hidden border border-[var(--border)]">
+              <div class="bg-purple-600 h-full" style="width: 23.4%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-bold">2. Atlantic Salmon Fillet</span>
+              <span>Cumulative Share: <strong>46.8%</strong> • +$8,990</span>
+            </div>
+            <div class="w-full bg-[var(--background)] h-2.5 rounded-full overflow-hidden border border-[var(--border)]">
+              <div class="bg-purple-600 h-full" style="width: 46.8%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-bold">3. Boneless Chicken Breast</span>
+              <span>Cumulative Share: <strong>68.4%</strong> • +$8,300</span>
+            </div>
+            <div class="w-full bg-[var(--background)] h-2.5 rounded-full overflow-hidden border border-[var(--border)]">
+              <div class="bg-purple-600 h-full" style="width: 68.4%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-bold">4. Whole Milk 1 Gallon</span>
+              <span>Cumulative Share: <strong>80.2% (The 80% Threshold)</strong></span>
+            </div>
+            <div class="w-full bg-[var(--background)] h-2.5 rounded-full overflow-hidden border border-[var(--border)]">
+              <div class="bg-emerald-500 h-full" style="width: 80.2%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-xs text-[var(--muted-foreground)]">
+          <strong class="text-purple-600 dark:text-purple-400">Inventory Action Recommendation:</strong> Maintain a 99.5% service level on Bananas, Salmon, Chicken, and Milk. A stockout on any of these four items risks basket abandonment, as they trigger over 80% of store footfall.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    function switchPage(pageKey) {
+      document.querySelectorAll('.pbi-tab').forEach(b => {
+        b.classList.remove('active');
+        b.classList.add('text-[var(--muted-foreground)]');
+      });
+      const activeBtn = document.getElementById('tab-' + pageKey);
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.classList.remove('text-[var(--muted-foreground)]');
+      }
+
+      ['velocity', 'organic', 'pareto'].forEach(p => {
+        const el = document.getElementById('page-' + p);
+        if (el) el.classList.add('hidden');
+      });
+      const target = document.getElementById('page-' + pageKey);
+      if (target) target.classList.remove('hidden');
+    }
+
+    function applyFilters() {
+      const dept = document.getElementById('slicer-dept').value;
+      const org = document.getElementById('slicer-organic').value;
+      const store = document.getElementById('slicer-store').value;
+
+      let multiplier = 1.0;
+      let filterText = [];
+
+      if (dept !== 'ALL') {
+        multiplier *= (dept === 'Produce' ? 0.31 : (dept === 'Meat & Seafood' ? 0.29 : 0.22));
+        filterText.push(dept);
+      }
+      if (org !== 'ALL') {
+        multiplier *= (org === '1' ? 0.284 : 0.716);
+        filterText.push(org === '1' ? 'Organic' : 'Conventional');
+      }
+      if (store !== 'ALL') {
+        multiplier *= 0.25;
+        filterText.push(store);
+      }
+
+      const rev = Math.round(38420 * multiplier);
+      const profit = Math.round(rev * 0.527);
+      const orders = Math.round(3000 * multiplier);
+      const units = Math.round(6450 * multiplier);
+      const abv = (orders > 0 ? (rev / orders) : 12.80).toFixed(2);
+
+      document.getElementById('kpi-revenue').innerText = '$' + rev.toLocaleString();
+      document.getElementById('kpi-profit').innerText = '$' + profit.toLocaleString();
+      document.getElementById('kpi-abv').innerText = '$' + abv;
+
+      if (filterText.length > 0) {
+        document.getElementById('filter-status').innerText = `Filtered by: ${filterText.join(' • ')} (${orders.toLocaleString()} records)`;
+      } else {
+        document.getElementById('filter-status').innerText = 'Showing 3,000 / 3,000 cleaned transactions';
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('slicer-dept').value = 'ALL';
+      document.getElementById('slicer-organic').value = 'ALL';
+      document.getElementById('slicer-store').value = 'ALL';
+      applyFilters();
+    }
+  </script>
+</body>
+</html>

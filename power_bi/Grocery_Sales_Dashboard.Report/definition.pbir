@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "datasetReference": {
+    "byPath": {
+      "path": "../Grocery_Sales_Dashboard.SemanticModel"
+    },
+    "byConnection": null
+  }
+}

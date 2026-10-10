@@ -1,0 +1,96 @@
+{
+  "name": "Grocery_Sales_Dashboard",
+  "compatibilityLevel": 1550,
+  "model": {
+    "culture": "en-US",
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "tables": [
+      {
+        "name": "Cleaned_Grocery_Sales",
+        "columns": [
+          { "name": "Transaction_ID", "dataType": "string", "sourceColumn": "Transaction_ID" },
+          { "name": "Date", "dataType": "string", "sourceColumn": "Date" },
+          { "name": "Standard_Product_Name", "dataType": "string", "sourceColumn": "Standard_Product_Name" },
+          { "name": "Category", "dataType": "string", "sourceColumn": "Category" },
+          { "name": "Unit_Price", "dataType": "double", "sourceColumn": "Unit_Price" },
+          { "name": "Unit_Cost", "dataType": "double", "sourceColumn": "Unit_Cost" },
+          { "name": "Quantity_Sold", "dataType": "int64", "sourceColumn": "Quantity_Sold" },
+          { "name": "Total_Revenue", "dataType": "double", "sourceColumn": "Total_Revenue" },
+          { "name": "Total_COGS", "dataType": "double", "sourceColumn": "Total_COGS" },
+          { "name": "Gross_Margin", "dataType": "double", "sourceColumn": "Gross_Margin" },
+          { "name": "Gross_Margin_Pct", "dataType": "double", "sourceColumn": "Gross_Margin_Pct" },
+          { "name": "Is_Organic", "dataType": "int64", "sourceColumn": "Is_Organic" },
+          { "name": "Store_Location", "dataType": "string", "sourceColumn": "Store_Location" }
+        ],
+        "partitions": [
+          {
+            "name": "Cleaned_Grocery_Sales-Partition",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(\"C:\\\\Users\\\\Krisha Jariwala\\\\.gemini\\\\antigravity\\\\scratch\\\\data_analyst_portfolio\\\\03_grocery_sales_data_analysis\\\\data\\\\cleaned_grocery_sales.csv\"), [Delimiter=\",\", Columns=13, Encoding=65001, QuoteStyle=QuoteStyle.None]),",
+                "    #\"Promoted Headers\" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),",
+                "    #\"Changed Type\" = Table.TransformColumnTypes(#\"Promoted Headers\", {{\"Transaction_ID\", type text}, {\"Date\", type text}, {\"Standard_Product_Name\", type text}, {\"Category\", type text}, {\"Unit_Price\", type number}, {\"Unit_Cost\", type number}, {\"Quantity_Sold\", Int64.Type}, {\"Total_Revenue\", type number}, {\"Total_COGS\", type number}, {\"Gross_Margin\", type number}, {\"Gross_Margin_Pct\", type number}, {\"Is_Organic\", Int64.Type}, {\"Store_Location\", type text}})",
+                "in",
+                "    #\"Changed Type\""
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Total Grocery Revenue",
+            "expression": "SUM(Cleaned_Grocery_Sales[Total_Revenue])",
+            "formatString": "$#,##0.00"
+          },
+          {
+            "name": "Total Units Sold",
+            "expression": "SUM(Cleaned_Grocery_Sales[Quantity_Sold])",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Total Transactions",
+            "expression": "DISTINCTCOUNT(Cleaned_Grocery_Sales[Transaction_ID])",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Gross Profit",
+            "expression": "SUM(Cleaned_Grocery_Sales[Gross_Margin])",
+            "formatString": "$#,##0.00"
+          },
+          {
+            "name": "Gross Margin %",
+            "expression": "DIVIDE([Gross Profit], [Total Grocery Revenue], 0)",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Average Basket Size",
+            "expression": "DIVIDE([Total Units Sold], [Total Transactions], 0)",
+            "formatString": "0.00"
+          },
+          {
+            "name": "Average Basket Value",
+            "expression": "DIVIDE([Total Grocery Revenue], [Total Transactions], 0)",
+            "formatString": "$#,##0.00"
+          },
+          {
+            "name": "Organic Revenue Share %",
+            "expression": "DIVIDE(CALCULATE([Total Grocery Revenue], Cleaned_Grocery_Sales[Is_Organic] = 1), [Total Grocery Revenue], 0)",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Organic Margin Premium %",
+            "expression": "CALCULATE([Gross Margin %], Cleaned_Grocery_Sales[Is_Organic] = 1) - CALCULATE([Gross Margin %], Cleaned_Grocery_Sales[Is_Organic] = 0)",
+            "formatString": "+0.0%;-0.0%"
+          }
+        ]
+      }
+    ]
+  }
+}
